@@ -2,7 +2,7 @@
 #include "user_manager.hpp"
 UserDatabase usersDB;
 std::mutex usersDBMutex;
-void UserManager::signUp(const UserInformation &userInfo) throw(UserManagerException)
+void UserManager::signUp(const UserInformation &userInfo) // throw(UserManagerException)
 {
 
     std::unique_lock<std::mutex> lock{usersDBMutex};

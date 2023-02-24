@@ -10,17 +10,17 @@ install_cpprestsdk(){
 	restsdkDir="$libDir/cpprestsdk"
 	restsdkBuildDir="$restsdkDir/build.release"
    
-   if [ -d "$restsdkDir" ]; then
-      rm -rf "$restsdkDir"
-   fi
+   #if [ -d "$restsdkDir" ]; then
+      #rm -rf "$restsdkDir"
+   #fi
    
-	git clone https://github.com/Microsoft/cpprestsdk.git "$restsdkDir"
+	#git clone https://github.com/Microsoft/cpprestsdk.git "$restsdkDir"
 	(cd $restsdkDir && git submodule update --init && git checkout tags/$RESTSDK_VERSION -b $RESTSDK_VERSION)
 	mkdir "$restsdkBuildDir"
 	if [[ "$OSTYPE" == "linux-gnu" ]]; then
-		export CXX=g++-4.9
+		export CXX=g++
 	fi
-	(cd "$restsdkBuildDir" && cmake3 ../Release -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTS=OFF -DBUILD_SAMPLES=OFF)
+	(cd "$restsdkBuildDir" && cmake ../Release -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTS=OFF -DBUILD_SAMPLES=OFF)
 	(cd "$restsdkBuildDir" && make)
 }
 

@@ -24,7 +24,7 @@ using UserDatabase = std::map<std::string, UserInformation>;
 class UserManager
 {
 public:
-    void signUp(const UserInformation &userInfo) throw(UserManagerException);
+    void signUp(const UserInformation &userInfo);// throw(UserManagerException);
     bool signOn(const std::string email,
                 const std::string password,
                 UserInformation &userInfo);

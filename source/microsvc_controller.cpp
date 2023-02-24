@@ -27,11 +27,13 @@
 #include <std_micro_service.hpp>
 #include "microsvc_controller.hpp"
 #include "user_manager.hpp"
+#include "book_repository.h"
 
 using namespace web;
 using namespace http;
 
-void MicroserviceController::initRestOpHandlers() {
+void MicroserviceController::initRestOpHandlers()
+{
     _listener.support(methods::GET, std::bind(&MicroserviceController::handleGet, this, std::placeholders::_1));
     _listener.support(methods::PUT, std::bind(&MicroserviceController::handlePut, this, std::placeholders::_1));
     _listener.support(methods::POST, std::bind(&MicroserviceController::handlePost, this, std::placeholders::_1));
@@ -39,10 +41,13 @@ void MicroserviceController::initRestOpHandlers() {
     _listener.support(methods::PATCH, std::bind(&MicroserviceController::handlePatch, this, std::placeholders::_1));
 }
 
-void MicroserviceController::handleGet(http_request message) {
+void MicroserviceController::handleGet(http_request message)
+{
     auto path = requestPath(message);
-    if (!path.empty()) {
-        if (path[0] == "service" && path[1] == "test") {
+    if (!path.empty())
+    {
+        if (path[0] == "service" && path[1] == "test")
+        {
             auto response = json::value::object();
             response["version"] = json::value::string("0.1.1");
             response["status"] = json::value::string("ready!");
@@ -97,28 +102,71 @@ void MicroserviceController::handleGet(http_request message) {
                 message.reply(status_codes::Unauthorized);
             } });
         }
+        else if (path[0] == "books" && !path[1].empty())
+        {
+            pplx::create_task([=]()
+                              {
+                                 m_pBookRepository->GetBookById(path[1]);
+                              auto response = json::value::object();
+            response["version"] = json::value::string("0.1.1");
+            response["status"] = json::value::string("ready!");
+            message.reply(status_codes::OK, response); });
+        }
     }
-    else {
+    else
+    {
         message.reply(status_codes::NotFound);
     }
 }
 
-void MicroserviceController::handlePatch(http_request message) {
+void MicroserviceController::handlePatch(http_request message)
+{
     message.reply(status_codes::NotImplemented, responseNotImpl(methods::PATCH));
 }
 
-void MicroserviceController::handlePut(http_request message) {
-    message.reply(status_codes::NotImplemented, responseNotImpl(methods::PUT));
+void MicroserviceController::handlePut(http_request message)
+{
+    auto path = requestPath(message);
+    if (!path.empty())
+    {
+        if (path.size() == 2 && path[0] == "books" && !path[1].empty())
+        {
+            message.extract_json().then([=](json::value request)
+                                        {
+            try {
+                std::string title = request.at("title").as_string();
+                std::string author = request.at("author").as_string();
+                int year = request.at("year").as_integer();
+                Book book(0, title, author, year);
+                Book ret_book = m_pBookRepository->UpdateBook(path[1], book);
+                json::value response;
+                response["id"] = json::value::number(ret_book.id);
+                response["title"] = json::value::string(ret_book.title);
+                response["author"] = json::value::string(ret_book.author);
+                response["year"] = json::value::number(ret_book.year);
+                message.reply(status_codes::OK, response);
+            }
+            catch(UserManagerException & e) {
+                message.reply(status_codes::BadRequest, e.what());
+            }
+            catch(json::json_exception & e) {
+                message.reply(status_codes::BadRequest);
+            } });
+        }
+    }
 }
 
-void MicroserviceController::handlePost(http_request message) {
+void MicroserviceController::handlePost(http_request message)
+{
     auto path = requestPath(message);
-    if (!path.empty() &&
-        path[0] == "users" &&
-        path[1] == "signup")
+    if (!path.empty())
     {
-        message.extract_json().then([=](json::value request)
-                                    {
+        if (
+            path[0] == "users" &&
+            path[1] == "signup")
+        {
+            message.extract_json().then([=](json::value request)
+                                        {
             try {
                 UserInformation userInfo { 
                     request.at("email").as_string(),
@@ -139,36 +187,87 @@ void MicroserviceController::handlePost(http_request message) {
             catch(json::json_exception & e) {
                 message.reply(status_codes::BadRequest);
             } });
+        }
+        else if (path.size() == 1 && path[0] == "books")
+        {
+            message.extract_json().then([=](json::value request)
+                                        {
+            try {
+                std::string title = request.at("title").as_string();
+                std::string author = request.at("author").as_string();
+                int year = request.at("year").as_integer();
+                Book book(0, title, author, year);
+                Book ret_book = m_pBookRepository->AddBook(book);
+                json::value response;
+                response["id"] = json::value::number(ret_book.id);
+                response["title"] = json::value::string(ret_book.title);
+                response["author"] = json::value::string(ret_book.author);
+                response["year"] = json::value::number(ret_book.year);
+                message.reply(status_codes::Created, response);
+            }
+            catch(UserManagerException & e) {
+                message.reply(status_codes::BadRequest, e.what());
+            }
+            catch(json::json_exception & e) {
+                message.reply(status_codes::BadRequest);
+            } });
+        }
     }
 }
 
-void MicroserviceController::handleDelete(http_request message) {    
-    message.reply(status_codes::NotImplemented, responseNotImpl(methods::DEL));
+void MicroserviceController::handleDelete(http_request message)
+{
+    auto path = requestPath(message);
+    if (!path.empty())
+    {
+        if (path[0] == "books" && !path[1].empty())
+        {
+            pplx::create_task([=]()
+                              {
+                                 m_pBookRepository->DeleteBook(path[1]);
+            message.reply(status_codes::NoContent); });
+        }
+    }
+    else
+    {
+        message.reply(status_codes::NotFound);
+    }
 }
 
-void MicroserviceController::handleHead(http_request message) {
+void MicroserviceController::handleHead(http_request message)
+{
     message.reply(status_codes::NotImplemented, responseNotImpl(methods::HEAD));
 }
 
-void MicroserviceController::handleOptions(http_request message) {
+void MicroserviceController::handleOptions(http_request message)
+{
     message.reply(status_codes::NotImplemented, responseNotImpl(methods::OPTIONS));
 }
 
-void MicroserviceController::handleTrace(http_request message) {
+void MicroserviceController::handleTrace(http_request message)
+{
     message.reply(status_codes::NotImplemented, responseNotImpl(methods::TRCE));
 }
 
-void MicroserviceController::handleConnect(http_request message) {
+void MicroserviceController::handleConnect(http_request message)
+{
     message.reply(status_codes::NotImplemented, responseNotImpl(methods::CONNECT));
 }
 
-void MicroserviceController::handleMerge(http_request message) {
+void MicroserviceController::handleMerge(http_request message)
+{
     message.reply(status_codes::NotImplemented, responseNotImpl(methods::MERGE));
 }
 
-json::value MicroserviceController::responseNotImpl(const http::method & method) {
+json::value MicroserviceController::responseNotImpl(const http::method &method)
+{
     auto response = json::value::object();
     response["serviceName"] = json::value::string("C++ Mircroservice Sample");
     response["http_method"] = json::value::string(method);
-    return response ;
+    return response;
+}
+
+MicroserviceController::MicroserviceController() : BasicController()
+{
+    m_pBookRepository = new BookRepository();
 }

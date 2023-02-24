@@ -24,15 +24,20 @@
 // SOFTWARE.
 //
 
-#pragma once 
+#pragma once
 
 #include <basic_controller.hpp>
+#include "book_repository.h"
 
 using namespace cfx;
 
-class MicroserviceController : public BasicController, Controller {
+class MicroserviceController : public BasicController, Controller
+{
+private:
+    BookRepository *m_pBookRepository;
+
 public:
-    MicroserviceController() : BasicController() {}
+    MicroserviceController();
     ~MicroserviceController() {}
     void handleGet(http_request message) override;
     void handlePut(http_request message) override;
@@ -44,8 +49,8 @@ public:
     void handleTrace(http_request message) override;
     void handleConnect(http_request message) override;
     void handleMerge(http_request message) override;
-    void initRestOpHandlers() override;    
+    void initRestOpHandlers() override;
 
 private:
-    static json::value responseNotImpl(const http::method & method);
+    static json::value responseNotImpl(const http::method &method);
 };
